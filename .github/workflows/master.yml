@@ -66,7 +66,7 @@ jobs:
     name: Déploiement sur PyPI
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
     - name: ⬇️ Checkout du code
