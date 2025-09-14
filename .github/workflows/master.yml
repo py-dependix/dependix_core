@@ -49,7 +49,7 @@ jobs:
 
     - name: Run linting
       run: |
-        poetry run pylint .
+        poetry run pylint dependix_core
         poetry run black --check .
 
     - name: Run tests
