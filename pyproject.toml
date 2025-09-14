@@ -22,5 +22,6 @@ dependencies = [
   "pyyaml",
   "black",
   "pytest",
-  "coverage"
+  "coverage",
+  "pylint"
 ]

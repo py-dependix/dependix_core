@@ -46,7 +46,7 @@ jobs:
 
     - name: Run linting
       run: |
-        poetry run flake8 .
+        poetry run pylint .
         poetry run black --check .
 
     - name: Run tests
