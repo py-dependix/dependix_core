@@ -7,7 +7,7 @@ et définir des méthodes de cycle de vie (`post_construct` et `pre_destroy`).
 
 import functools
 import re
-from typing import Dict, Any, List, Type
+from typing import Dict, Any, List, Type, Optional
 
 # Variables globales pour stocker les informations des beans décorés
 _decorated_beans: Dict[str, Dict[str, Any]] = {}
@@ -38,7 +38,7 @@ def get_pre_destroy_methods() -> Dict[str, Any]:
 
 
 def register(
-    name: str | None = None,
+    name: Optional[str] = None,
     scope: str = "singleton",
     dependencies: List[str] | None = None,
 ):
