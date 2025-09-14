@@ -78,7 +78,11 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
-        cache: 'poetry'
+    
+    - name: ⚙️ Installation de Poetry
+      uses: snok/install-poetry@v1 # Utilisez cette action pour une installation fiable
+      with:
+        version: 'latest'
 
     - name: ⚙️ Installation de Poetry
       run: pipx install poetry
