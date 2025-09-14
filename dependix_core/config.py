@@ -3,6 +3,7 @@
 Il fournit une fonction utilitaire pour charger les définitions de beans
 et les enregistrer dans un conteneur.
 """
+
 import importlib
 import yaml
 from .container import Container

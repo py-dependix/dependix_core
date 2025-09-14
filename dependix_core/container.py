@@ -130,7 +130,9 @@ class Container:
                 continue
 
             if isinstance(param_type, str):
-                param_type = getattr(sys.modules[class_type.__module__], param_type, None)
+                param_type = getattr(
+                    sys.modules[class_type.__module__], param_type, None
+                )
 
             if param_type and param_type in self._class_to_bean_name:
                 dependencies_map[param_name] = param_type
@@ -160,14 +162,12 @@ class Container:
                     dependencies_map[dep_name] = dep_instance
             else:
                 # Sinon, on utilise l'introspection
-                dependencies_by_type = self._resolve_dependencies(
-                    definition.class_type
-                )
+                dependencies_by_type = self._resolve_dependencies(definition.class_type)
                 for param_name, dep_class_type in dependencies_by_type.items():
                     dep_bean_name = self._class_to_bean_name[dep_class_type]
                     dep_instance = self.get_bean(dep_bean_name)
                     dependencies_map[param_name] = dep_instance
-            
+
             # Création de l'instance avec les dépendances résolues
             instance = definition.class_type(**dependencies_map)
 
@@ -185,7 +185,7 @@ class Container:
         except Exception as exc:
             self._resolving_stack.pop()
             raise BeanInstantiationError(class_name, exc) from exc
-        
+
         self._resolving_stack.pop()
         return instance
 

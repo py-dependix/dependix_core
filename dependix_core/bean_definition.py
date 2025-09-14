@@ -22,6 +22,7 @@ class BeanDefinition:
     """
     Objet de données pour stocker la configuration d'un bean.
     """
+
     class_type: Type
     scope: BeanScope = BeanScope.SINGLETON
     dependencies: List[str] = field(default_factory=list)

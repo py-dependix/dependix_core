@@ -38,7 +38,9 @@ def get_pre_destroy_methods() -> Dict[str, Any]:
 
 
 def register(
-    name: str | None = None, scope: str = "singleton", dependencies: List[str] | None = None
+    name: str | None = None,
+    scope: str = "singleton",
+    dependencies: List[str] | None = None,
 ):
     """
     Décorateur pour enregistrer une classe en tant que bean.

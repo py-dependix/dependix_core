@@ -5,6 +5,7 @@ Ce module contient des tests pour valider le bon fonctionnement de la
 classe Container, des décorateurs d'enregistrement, et de la gestion
 des dépendances.
 """
+
 import os
 import tempfile
 import sys
@@ -79,12 +80,14 @@ class EmailService:
 # Services avec dépendance cyclique pour les tests
 class ServiceA:
     """Un service A qui dépend du service B."""
+
     def __init__(self, service_b: "ServiceB"):
         self.service_b = service_b
 
 
 class ServiceB:
     """Un service B qui dépend du service A."""
+
     def __init__(self, service_a: ServiceA):
         self.service_a = service_a
 
@@ -93,6 +96,7 @@ class ServiceB:
 @register(name="decorated_simple", scope="singleton")
 class DecoratedSimpleService:
     """Un service simple décoré."""
+
     def __init__(self):
         self.value = "decorated"
         self.post_construct_called = False
@@ -112,6 +116,7 @@ class DecoratedSimpleService:
 @register(scope="prototype")
 class DecoratedDependencyService:
     """Un service décoré avec une dépendance décorée."""
+
     def __init__(self, decorated_simple: DecoratedSimpleService):
         self.decorated_simple = decorated_simple
 
@@ -119,6 +124,7 @@ class DecoratedDependencyService:
 @register(name="lifecycle_service")
 class LifecycleService:
     """Un service pour tester le cycle de vie."""
+
     def __init__(self):
         self.state = "created"
 
@@ -354,7 +360,7 @@ class TestDecorators:
         @register(name="custom_name", scope="prototype")
         class TestService:
             pass
-        
+
         beans = get_decorated_beans()
 
         assert "custom_name" in beans
