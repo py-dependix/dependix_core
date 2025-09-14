@@ -2,44 +2,40 @@ name: CI/CD du projet Python
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
+  release:
+    types: [published]
 
 jobs:
   build-and-test:
-    name: Build & Test
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-    - name: ⬇️ Checkout du code
-      uses: actions/checkout@v4
+      - name: ⬇️ Checkout du code
+        uses: actions/checkout@v4
 
-    - name: ⚙️ Configuration de l'environnement Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: ⚙️ Configuration de l'environnement Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'poetry'
 
-    - name: 📦 Installation des dépendances
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        # Si vous utilisez poetry, remplacez la ligne ci-dessus par :
-        # pip install poetry
-        # poetry install
+      - name: 📦 Installation de Poetry
+        run: pipx install poetry
 
-    - name: ✅ Lancement des tests
-      run: |
-        pip install pytest pytest-cov
-        pytest --cov=. --cov-report=xml
+      - name: 🛠️ Installation des dépendances du projet
+        run: poetry install --no-root
 
-    - name: 🔍 Lancement du linter (Black)
-      run: |
-        pip install black
-        black --check .
+      - name: ✅ Lancement des tests avec pytest
+        run: poetry run pytest
+
+      - name: 🔍 Lancement du linter (Black)
+        run: poetry run black --check .
 
   # -------------------------------------------------------------
   
@@ -47,7 +43,7 @@ jobs:
     name: Déploiement sur PyPI
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')
 
     steps:
     - name: ⬇️ Checkout du code
@@ -57,14 +53,16 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
+        cache: 'poetry'
 
-    - name: ⚙️ Installation des outils de build
-      run: python -m pip install --upgrade build
+    - name: ⚙️ Installation de Poetry
+      run: pipx install poetry
 
     - name: 🏗️ Création du package (wheel & sdist)
-      run: python -m build
+      run: poetry build
 
     - name: 🚀 Publication sur PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
+        packages_dir: 'dist/'
