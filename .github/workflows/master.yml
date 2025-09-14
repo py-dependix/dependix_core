@@ -1,68 +1,58 @@
-name: CI/CD du projet Python
+name: CI
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ master ]
   pull_request:
-    branches: [ "main", "master" ]
-  release:
-    types: [published]
+    branches: [ master ]
 
 jobs:
-  build-and-test:
+  test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
-      - name: ⬇️ Checkout du code
-        uses: actions/checkout@v4
-
-      - name: ⚙️ Configuration de l'environnement Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-          cache: 'poetry'
-
-      - name: 📦 Installation de Poetry
-        run: pipx install poetry
-
-      - name: 🛠️ Installation des dépendances du projet
-        run: poetry install --no-root
-
-      - name: ✅ Lancement des tests avec pytest
-        run: poetry run pytest
-
-      - name: 🔍 Lancement du linter (Black)
-        run: poetry run black --check .
-
-  # -------------------------------------------------------------
-  
-  publish-pypi:
-    name: Déploiement sur PyPI
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release' && startsWith(github.ref, 'refs/tags/')
-
-    steps:
-    - name: ⬇️ Checkout du code
+    - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: 📦 Configuration de Python
-      uses: actions/setup-python@v5
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
-        cache: 'poetry'
+        python-version: ${{ matrix.python-version }}
 
-    - name: ⚙️ Installation de Poetry
-      run: pipx install poetry
-
-    - name: 🏗️ Création du package (wheel & sdist)
-      run: poetry build
-
-    - name: 🚀 Publication sur PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
       with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        packages_dir: 'dist/'
+        version: "latest"
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+        installer-parallel: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+
+    - name: Install project
+      run: poetry install --no-interaction
+
+    - name: Run linting
+      run: |
+        poetry run flake8 .
+        poetry run black --check .
+
+    - name: Run tests
+      run: poetry run pytest --cov=dependix_core --cov-report=xml
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
