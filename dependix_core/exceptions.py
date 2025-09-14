@@ -4,6 +4,8 @@ Définit une hiérarchie d'exceptions pour gérer les erreurs
 spécifiques à l'injection de dépendances.
 """
 
+from typing import Optional
+
 
 class DependixCoreError(Exception):
     """Classe de base pour toutes les exceptions de Dependix Core."""
@@ -15,8 +17,8 @@ class DependencyNotFoundError(DependixCoreError):
     def __init__(
         self,
         message: str,
-        dependency_name: str | None = None,
-        requesting_bean: str | None = None,
+        dependency_name: Optional[str] = None,
+        requesting_bean: Optional[str] = None,
     ):
         self.dependency_name = dependency_name
         self.requesting_bean = requesting_bean
@@ -55,7 +57,7 @@ class BeanInstantiationError(DependixCoreError):
 class ConfigurationError(DependixCoreError):
     """Erreur levée lors du chargement de la configuration."""
 
-    def __init__(self, message: str, source: str | None = None):
+    def __init__(self, message: str, source: Optional[str] = None):
         self.source = source
         if source:
             message = f"Erreur de configuration dans '{source}': {message}"
@@ -65,7 +67,7 @@ class ConfigurationError(DependixCoreError):
 class ScopeError(DependixCoreError):
     """Erreur levée quand il y a un problème avec le scope d'un bean."""
 
-    def __init__(self, bean_name: str, scope: str, message: str | None = None):
+    def __init__(self, bean_name: str, scope: str, message: Optional[str] = None):
         self.bean_name = bean_name
         self.scope = scope
         if not message:
