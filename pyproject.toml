@@ -25,3 +25,6 @@ dependencies = [
   "coverage",
   "pylint"
 ]
+
+[design]
+max-locals = 11

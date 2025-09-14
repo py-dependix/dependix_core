@@ -152,19 +152,22 @@ class Container:
 
         try:
             dependencies_map = {}
-            dependencies_to_resolve = definition.dependencies
-
-            if not dependencies_to_resolve:
-                # Utiliser l'introspection si les dépendances ne sont pas spécifiées
-                dependencies_to_resolve = self._resolve_dependencies(
+            if definition.dependencies:
+                # Si les dépendances sont spécifiées explicitement, on les résout
+                dependencies_names = definition.dependencies
+                for dep_name in dependencies_names:
+                    dep_instance = self.get_bean(dep_name)
+                    dependencies_map[dep_name] = dep_instance
+            else:
+                # Sinon, on utilise l'introspection
+                dependencies_by_type = self._resolve_dependencies(
                     definition.class_type
                 )
+                for param_name, dep_class_type in dependencies_by_type.items():
+                    dep_bean_name = self._class_to_bean_name[dep_class_type]
+                    dep_instance = self.get_bean(dep_bean_name)
+                    dependencies_map[param_name] = dep_instance
             
-            # Résolution des dépendances et construction du dictionnaire
-            for dep_name, dep_class_type in dependencies_to_resolve.items():
-                dep_instance = self.get_bean(self._class_to_bean_name[dep_class_type])
-                dependencies_map[dep_name] = dep_instance
-
             # Création de l'instance avec les dépendances résolues
             instance = definition.class_type(**dependencies_map)
 
