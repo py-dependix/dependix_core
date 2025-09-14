@@ -23,6 +23,7 @@ dependencies = [
   "black",
   "pytest",
   "coverage",
+  "pytest-cov",
   "pylint"
 ]
 
