@@ -1,0 +1,26 @@
+# Section Build
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# Section Projet
+[project]
+name = "dependix_core"
+version = "0.1.0"
+authors = [
+  { name="Grégoire Meunier", email="gregoire.meunie@live.fr" },
+]
+description = "Dependix Core, new python coding framework."
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "pyyaml",
+  "black",
+  "pytest",
+  "coverage"
+]
