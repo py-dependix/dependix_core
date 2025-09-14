@@ -19,7 +19,7 @@ class BeanDefinition:
     def __init__(
         self,
         class_type: Type,
-        scope: str = "singleton",
+        scope: str | BeanScope = BeanScope.SINGLETON,
         dependencies: Optional[List[str]] = None,
         lazy: bool = False,
         factory_method: Optional[str] = None,
@@ -28,22 +28,21 @@ class BeanDefinition:
         constructor_args: Optional[List[Any]] = None,
         properties: Optional[dict] = None,
     ):
+        """Initialise un BeanDefinition."""
         self.class_type = class_type
 
-        # Conversion du scope en BeanScope si c'est une string
+        # Assure que le scope est toujours un membre de l'énumération BeanScope.
         if isinstance(scope, str):
             try:
                 self.scope = BeanScope(scope)
             except ValueError:
-                # Pour la compatibilité, on accepte les strings non reconnues
-                # mais on les convertit en SINGLETON par défaut
                 self.scope = BeanScope.SINGLETON
         elif isinstance(scope, BeanScope):
             self.scope = scope
         else:
             self.scope = BeanScope.SINGLETON
 
-        self.dependencies = dependencies if dependencies is not None else []
+        self.dependencies = dependencies or []
         self.lazy = lazy
         self.factory_method = factory_method
         self.init_method = init_method
@@ -51,8 +50,12 @@ class BeanDefinition:
         self.constructor_args = constructor_args or []
         self.properties = properties or {}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
+        """
+        Représentation string pour le débogage.
+        """
         return (
             f"BeanDefinition(class_type={self.class_type.__name__}, "
             f"scope={self.scope.value}, dependencies={self.dependencies})"
         )
+    

@@ -1,17 +1,26 @@
+"""
+Conteneur principal pour la gestion de l'injection de dépendances.
+
+Ce module définit la classe `Container`, le cœur de la bibliothèque,
+responsable de l'enregistrement, de la résolution et de la gestion
+du cycle de vie des beans.
+"""
+
 import inspect
-import re
+import sys
 import threading
 from typing import Any, Dict, List, Optional, Type, TypeVar, get_type_hints
+
 from .bean_definition import BeanDefinition, BeanScope
-from .exceptions import (
-    CyclicDependencyError,
-    DependencyNotFoundError,
-    BeanInstantiationError,
-)
 from .decorators import (
     get_decorated_beans,
     get_post_construct_methods,
     get_pre_destroy_methods,
+)
+from .exceptions import (
+    BeanInstantiationError,
+    CyclicDependencyError,
+    DependencyNotFoundError,
 )
 
 T = TypeVar("T")
@@ -20,7 +29,6 @@ T = TypeVar("T")
 class Container:
     """
     Conteneur IoC principal pour la gestion des dépendances.
-    Version compatible avec le code existant.
     """
 
     def __init__(self):
@@ -72,7 +80,7 @@ class Container:
                 )
         self._validate_dependencies()
 
-    def get_bean(self, name: str):
+    def get_bean(self, name: str) -> Any:
         """Récupère un bean par son nom (compatible avec l'API existante)."""
         if self._is_shutdown:
             raise RuntimeError("Le conteneur est arrêté")
@@ -88,8 +96,9 @@ class Container:
                     if name not in self._singletons:
                         self._singletons[name] = self._create_bean_instance(definition)
             return self._singletons[name]
-        else:  # Prototype scope
-            return self._create_bean_instance(definition)
+
+        # Prototype scope
+        return self._create_bean_instance(definition)
 
     def _resolve_dependencies(self, class_type: Type) -> Dict[str, Type]:
         """Résout automatiquement les dépendances via l'introspection."""
@@ -98,11 +107,14 @@ class Container:
         ):
             return {}
 
+        # Gère les références anticipées de type (annotations en tant que chaînes)
+        # en utilisant le module sys pour un import robuste.
         try:
-            type_hints = get_type_hints(class_type.__init__)
-        except NameError:
-            # Gère les références anticipées de type (annotations en tant que chaînes)
-            # si get_type_hints ne peut pas les résoudre
+            type_hints = get_type_hints(class_type.__init__, localns={
+                class_type.__name__: class_type
+            }, globalns=sys.modules[class_type.__module__].__dict__)
+        except NameError as exc:
+            # Fallback pour les cas plus complexes
             signature = inspect.signature(class_type.__init__)
             type_hints = {
                 p.name: p.annotation
@@ -115,14 +127,8 @@ class Container:
             if param_name == "self":
                 continue
 
-            # Gère les références anticipées de type (annotations en tant que chaînes)
             if isinstance(param_type, str):
-                # Simple recherche de la classe par nom dans le contexte global
-                # Pour les tests, cela fonctionnera car les classes sont dans le même module
-                # Pour un projet plus grand, un mécanisme plus robuste serait nécessaire
-                param_type = getattr(
-                    sys.modules[class_type.__module__], param_type, None
-                )
+                param_type = getattr(sys.modules[class_type.__module__], param_type, None)
 
             if param_type and param_type in self._class_to_bean_name:
                 dependencies_map[param_name] = param_type
@@ -173,12 +179,11 @@ class Container:
 
             self._resolving_stack.pop()
             return instance
-
-        except Exception as e:
+        except Exception as exc:
             self._resolving_stack.pop()
-            if isinstance(e, (CyclicDependencyError, DependencyNotFoundError)):
+            if isinstance(exc, (CyclicDependencyError, DependencyNotFoundError)):
                 raise
-            raise BeanInstantiationError(class_name, e)
+            raise BeanInstantiationError(class_name, exc) from exc
 
     def _validate_dependencies(self):
         """Valide toutes les dépendances enregistrées au démarrage."""
@@ -189,13 +194,13 @@ class Container:
                     dependencies_to_check = self._resolve_dependencies(
                         definition.class_type
                     )
-                except DependencyNotFoundError as e:
+                except DependencyNotFoundError as exc:
                     raise DependencyNotFoundError(
-                        f"Dépendance '{e.dependency_name}' pour le bean '{name}' non trouvée. "
+                        f"Dépendance '{exc.dependency_name}' pour le bean '{name}' non trouvée. "
                         "Veuillez enregistrer ce bean ou corriger l'orthographe.",
-                        e.dependency_name,
+                        exc.dependency_name,
                         name,
-                    )
+                    ) from exc
 
             for dep_name in dependencies_to_check:
                 if dep_name not in self._definitions:

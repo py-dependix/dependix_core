@@ -1,7 +1,10 @@
-# dependix_core/config.py
+"""Module pour la configuration du conteneur de dépendances à partir d'un fichier YAML.
 
-import yaml
+Il fournit une fonction utilitaire pour charger les définitions de beans
+et les enregistrer dans un conteneur.
+"""
 import importlib
+import yaml
 from .container import Container
 from .exceptions import DependencyNotFoundError
 
@@ -11,18 +14,19 @@ def load_from_yaml(container: Container, file_path: str):
     Charge les définitions de beans depuis un fichier YAML et les enregistre dans le conteneur.
 
     Args:
-        container (Container): L'instance du conteneur dans laquelle les beans doivent être enregistrés.
+        container (Container): L'instance du conteneur dans laquelle les beans
+            doivent être enregistrés.
         file_path (str): Le chemin vers le fichier de configuration YAML.
     """
     try:
-        with open(file_path, "r") as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
-    except FileNotFoundError:
+    except FileNotFoundError as exc:
         raise FileNotFoundError(
             f"Le fichier de configuration YAML n'a pas été trouvé à '{file_path}'."
-        )
-    except yaml.YAMLError as e:
-        raise yaml.YAMLError(f"Erreur de syntaxe dans le fichier YAML : {e}")
+        ) from exc
+    except yaml.YAMLError as exc:
+        raise yaml.YAMLError(f"Erreur de syntaxe dans le fichier YAML : {exc}") from exc
 
     beans_config = config.get("beans", {})
     if not isinstance(beans_config, dict):
@@ -39,10 +43,11 @@ def load_from_yaml(container: Container, file_path: str):
             module_path, class_name = class_path.rsplit(".", 1)
             module = importlib.import_module(module_path)
             class_type = getattr(module, class_name)
-        except (ImportError, AttributeError) as e:
+        except (ImportError, AttributeError) as exc:
             raise ImportError(
-                f"Impossible d'importer la classe '{class_path}' pour le bean '{name}' : {e}"
-            )
+                f"Impossible d'importer la classe '{class_path}' pour le bean "
+                f"'{name}' : {exc}"
+            ) from exc
 
         scope = bean_config.get("scope", "singleton")
         dependencies = bean_config.get("dependencies", [])

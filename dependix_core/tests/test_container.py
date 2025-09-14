@@ -1,9 +1,17 @@
-import pytest
-import tempfile
+"""
+Tests unitaires pour le conteneur d'injection de dépendances dependix_core.
+
+Ce module contient des tests pour valider le bon fonctionnement de la
+classe Container, des décorateurs d'enregistrement, et de la gestion
+des dépendances.
+"""
 import os
-import yaml
+import tempfile
 import sys
 from unittest.mock import patch, MagicMock
+
+import pytest
+import yaml
 
 # Import des modules à tester
 from dependix_core.container import Container
@@ -13,6 +21,9 @@ from dependix_core.decorators import (
     post_construct,
     pre_destroy,
     _reset_decorated_beans,
+    get_decorated_beans,
+    get_post_construct_methods,
+    get_pre_destroy_methods,
 )
 from dependix_core.exceptions import (
     DependencyNotFoundError,
@@ -49,6 +60,7 @@ class UserService:
         self.post_construct_called = False
 
     def get_users(self):
+        """Récupère une liste d'utilisateurs."""
         return ["user1", "user2"] if self.database_service.connected else []
 
 
@@ -59,17 +71,20 @@ class EmailService:
         self.user_service = user_service
 
     def send_newsletter(self):
+        """Envoie une newsletter à tous les utilisateurs."""
         users = self.user_service.get_users()
         return f"Newsletter envoyée à {len(users)} utilisateurs"
 
 
 # Services avec dépendance cyclique pour les tests
 class ServiceA:
+    """Un service A qui dépend du service B."""
     def __init__(self, service_b: "ServiceB"):
         self.service_b = service_b
 
 
 class ServiceB:
+    """Un service B qui dépend du service A."""
     def __init__(self, service_a: ServiceA):
         self.service_a = service_a
 
@@ -77,6 +92,7 @@ class ServiceB:
 # Services décorés pour les tests
 @register(name="decorated_simple", scope="singleton")
 class DecoratedSimpleService:
+    """Un service simple décoré."""
     def __init__(self):
         self.value = "decorated"
         self.post_construct_called = False
@@ -84,30 +100,36 @@ class DecoratedSimpleService:
 
     @post_construct
     def init_method(self):
+        """Méthode post-construct pour initialisation."""
         self.post_construct_called = True
 
     @pre_destroy
     def cleanup_method(self):
+        """Méthode pre-destroy pour le nettoyage."""
         self.pre_destroy_called = True
 
 
 @register(scope="prototype")
 class DecoratedDependencyService:
+    """Un service décoré avec une dépendance décorée."""
     def __init__(self, decorated_simple: DecoratedSimpleService):
         self.decorated_simple = decorated_simple
 
 
 @register(name="lifecycle_service")
 class LifecycleService:
+    """Un service pour tester le cycle de vie."""
     def __init__(self):
         self.state = "created"
 
     @post_construct
     def initialize(self):
+        """Initialise le service."""
         self.state = "initialized"
 
     @pre_destroy
     def cleanup(self):
+        """Nettoie le service."""
         self.state = "destroyed"
 
 
@@ -159,15 +181,11 @@ class TestContainer:
     def setup_method(self):
         """Setup avant chaque test."""
         self.container = Container()
-        # Supprimer _reset_decorated_beans() pour éviter d'effacer les beans définis globalement
-        # _reset_decorated_beans()
 
     def teardown_method(self):
         """Cleanup après chaque test."""
         if hasattr(self, "container"):
             self.container.shutdown()
-        # Supprimer _reset_decorated_beans()
-        # _reset_decorated_beans()
 
     def test_register_bean_simple(self):
         """Test d'enregistrement d'un bean simple."""
@@ -336,9 +354,7 @@ class TestDecorators:
         @register(name="custom_name", scope="prototype")
         class TestService:
             pass
-
-        from dependix_core.decorators import get_decorated_beans
-
+        
         beans = get_decorated_beans()
 
         assert "custom_name" in beans
@@ -351,8 +367,6 @@ class TestDecorators:
         @register()
         class AutoNamedService:
             pass
-
-        from dependix_core.decorators import get_decorated_beans
 
         beans = get_decorated_beans()
 
@@ -368,13 +382,12 @@ class TestDecorators:
 
             @post_construct
             def init(self):
+                """Initialise le service."""
                 self.initialized = True
-
-        from dependix_core.decorators import get_post_construct_methods
 
         methods = get_post_construct_methods()
 
-        assert any("TestService.init" in key for key in methods.keys())
+        assert any("TestService.init" in key for key in methods)
 
         # Test fonctionnel
         service = TestService()
@@ -391,13 +404,11 @@ class TestDecorators:
 
             @pre_destroy
             def cleanup(self):
+                """Nettoie le service."""
                 self.cleaned = True
 
-        from dependix_core.decorators import get_pre_destroy_methods
-
         methods = get_pre_destroy_methods()
-
-        assert any("TestService.cleanup" in key for key in methods.keys())
+        assert any("TestService.cleanup" in key for key in methods)
 
 
 class TestConfig:
@@ -419,7 +430,7 @@ class TestConfig:
     def create_temp_yaml(self, content):
         """Crée un fichier YAML temporaire."""
         file_path = os.path.join(self.temp_dir, "config.yaml")
-        with open(file_path, "w") as f:
+        with open(file_path, "w", encoding="utf-8") as f:
             f.write(content)
         return file_path
 
@@ -572,7 +583,6 @@ class TestIntegration:
     def setup_method(self):
         """Setup avant chaque test."""
         self.container = Container()
-        # _reset_decorated_beans() # Ligne à supprimer
 
     def teardown_method(self):
         """Cleanup après chaque test."""
@@ -609,6 +619,7 @@ class TestIntegration:
                 self.email_service = email_service
 
             def notify_all(self):
+                """Envoie des notifications."""
                 return f"Notifications: {self.email_service.send_newsletter()}"
 
         self.container.register_bean("notification_service", NotificationService)
@@ -619,19 +630,6 @@ class TestIntegration:
 
         assert "Notifications:" in result
         assert "2 utilisateurs" in result
-
-    # def test_lifecycle_management(self):
-    #     """Test complet de gestion du cycle de vie."""
-    #     # La classe est maintenant définie globalement
-    #     self.container.load_decorated_beans()
-    #     service = self.container.get_bean("lifecycle_service")
-
-    #     # Vérification post-construct
-    #     assert service.state == "initialized"
-
-    #     # Vérification pre-destroy
-    #     self.container.shutdown()
-    #     assert service.state == "destroyed"
 
 
 if __name__ == "__main__":

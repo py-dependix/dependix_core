@@ -1,4 +1,8 @@
-# dependix_core/__init__.py
+"""Module principal de dependix_core.
+
+Expose les composants principaux de l'injection de dépendances,
+y compris le conteneur, les décorateurs et les exceptions.
+"""
 
 from .container import Container
 from .decorators import register
