@@ -7,7 +7,6 @@ spécifiques à l'injection de dépendances.
 
 class DependixCoreError(Exception):
     """Classe de base pour toutes les exceptions de Dependix Core."""
-    pass
 
 
 class DependencyNotFoundError(DependixCoreError):

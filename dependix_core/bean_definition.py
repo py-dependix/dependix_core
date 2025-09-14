@@ -1,4 +1,10 @@
-from typing import List, Any, Optional, Type
+"""Module pour la définition de la classe BeanDefinition et BeanScope.
+
+Ces classes sont utilisées pour la configuration des beans dans le conteneur d'injection.
+"""
+
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Type
 from enum import Enum
 
 
@@ -11,44 +17,28 @@ class BeanScope(Enum):
     SESSION = "session"
 
 
+@dataclass
 class BeanDefinition:
     """
     Objet de données pour stocker la configuration d'un bean.
     """
+    class_type: Type
+    scope: BeanScope = BeanScope.SINGLETON
+    dependencies: List[str] = field(default_factory=list)
+    lazy: bool = False
+    factory_method: Optional[str] = None
+    init_method: Optional[str] = None
+    destroy_method: Optional[str] = None
+    constructor_args: List[Any] = field(default_factory=list)
+    properties: Dict[str, Any] = field(default_factory=dict)
 
-    def __init__(
-        self,
-        class_type: Type,
-        scope: str | BeanScope = BeanScope.SINGLETON,
-        dependencies: Optional[List[str]] = None,
-        lazy: bool = False,
-        factory_method: Optional[str] = None,
-        init_method: Optional[str] = None,
-        destroy_method: Optional[str] = None,
-        constructor_args: Optional[List[Any]] = None,
-        properties: Optional[dict] = None,
-    ):
-        """Initialise un BeanDefinition."""
-        self.class_type = class_type
-
-        # Assure que le scope est toujours un membre de l'énumération BeanScope.
-        if isinstance(scope, str):
+    def __post_init__(self):
+        """Méthode appelée après l'initialisation du dataclass."""
+        if isinstance(self.scope, str):
             try:
-                self.scope = BeanScope(scope)
+                self.scope = BeanScope(self.scope)
             except ValueError:
                 self.scope = BeanScope.SINGLETON
-        elif isinstance(scope, BeanScope):
-            self.scope = scope
-        else:
-            self.scope = BeanScope.SINGLETON
-
-        self.dependencies = dependencies or []
-        self.lazy = lazy
-        self.factory_method = factory_method
-        self.init_method = init_method
-        self.destroy_method = destroy_method
-        self.constructor_args = constructor_args or []
-        self.properties = properties or {}
 
     def __repr__(self) -> str:
         """
@@ -58,4 +48,3 @@ class BeanDefinition:
             f"BeanDefinition(class_type={self.class_type.__name__}, "
             f"scope={self.scope.value}, dependencies={self.dependencies})"
         )
-    

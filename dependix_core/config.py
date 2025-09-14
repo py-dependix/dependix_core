@@ -6,7 +6,6 @@ et les enregistrer dans un conteneur.
 import importlib
 import yaml
 from .container import Container
-from .exceptions import DependencyNotFoundError
 
 
 def load_from_yaml(container: Container, file_path: str):

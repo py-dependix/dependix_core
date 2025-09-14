@@ -110,10 +110,12 @@ class Container:
         # Gère les références anticipées de type (annotations en tant que chaînes)
         # en utilisant le module sys pour un import robuste.
         try:
-            type_hints = get_type_hints(class_type.__init__, localns={
-                class_type.__name__: class_type
-            }, globalns=sys.modules[class_type.__module__].__dict__)
-        except NameError as exc:
+            type_hints = get_type_hints(
+                class_type.__init__,
+                localns={class_type.__name__: class_type},
+                globalns=sys.modules[class_type.__module__].__dict__,
+            )
+        except NameError:
             # Fallback pour les cas plus complexes
             signature = inspect.signature(class_type.__init__)
             type_hints = {
@@ -150,20 +152,18 @@ class Container:
 
         try:
             dependencies_map = {}
-            if definition.dependencies:
-                # Si les dépendances sont spécifiées explicitement, on les résout
-                for dep_name in definition.dependencies:
-                    dep_instance = self.get_bean(dep_name)
-                    dependencies_map[dep_name] = dep_instance
-            else:
-                # Sinon, on utilise l'introspection
+            dependencies_to_resolve = definition.dependencies
+
+            if not dependencies_to_resolve:
+                # Utiliser l'introspection si les dépendances ne sont pas spécifiées
                 dependencies_to_resolve = self._resolve_dependencies(
                     definition.class_type
                 )
-                for param_name, dep_class_type in dependencies_to_resolve.items():
-                    dep_bean_name = self._class_to_bean_name[dep_class_type]
-                    dep_instance = self.get_bean(dep_bean_name)
-                    dependencies_map[param_name] = dep_instance
+            
+            # Résolution des dépendances et construction du dictionnaire
+            for dep_name, dep_class_type in dependencies_to_resolve.items():
+                dep_instance = self.get_bean(self._class_to_bean_name[dep_class_type])
+                dependencies_map[dep_name] = dep_instance
 
             # Création de l'instance avec les dépendances résolues
             instance = definition.class_type(**dependencies_map)
@@ -176,14 +176,15 @@ class Container:
                     method = getattr(instance, method_name, None)
                     if method and callable(method):
                         method()
-
+        except (CyclicDependencyError, DependencyNotFoundError) as exc:
             self._resolving_stack.pop()
-            return instance
+            raise exc
         except Exception as exc:
             self._resolving_stack.pop()
-            if isinstance(exc, (CyclicDependencyError, DependencyNotFoundError)):
-                raise
             raise BeanInstantiationError(class_name, exc) from exc
+        
+        self._resolving_stack.pop()
+        return instance
 
     def _validate_dependencies(self):
         """Valide toutes les dépendances enregistrées au démarrage."""
